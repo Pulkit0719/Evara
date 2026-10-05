@@ -8,7 +8,8 @@ export const ENV = {
   ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
   isProduction: process.env.NODE_ENV === "production",
 
-  // Provider-independent AI configuration (OpenAI-compatible)
+  // Provider-independent AI configuration (OpenAI-compatible, Gemini, Groq, Ollama)
+  aiProvider: (process.env.AI_PROVIDER || "openai").toLowerCase(),
   aiBaseUrl: process.env.AI_BASE_URL ?? "https://api.openai.com/v1",
   aiApiKey: process.env.AI_API_KEY ?? "",
   aiModel: process.env.AI_MODEL ?? "gpt-4o-mini",

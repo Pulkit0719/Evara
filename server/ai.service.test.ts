@@ -2,8 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import { OpenAICompatibleAdapter } from "./services/ai";
 
 describe("OpenAICompatibleAdapter AI Service", () => {
-  it("reports unconfigured when no API key is supplied", () => {
+  it("reports unconfigured when no API key is supplied for cloud providers", () => {
     const adapter = new OpenAICompatibleAdapter({
+      provider: "openai",
       baseUrl: "https://api.openai.com/v1",
       apiKey: "",
       defaultModel: "gpt-4o-mini",
@@ -14,6 +15,7 @@ describe("OpenAICompatibleAdapter AI Service", () => {
 
   it("reports configured when API key is provided", () => {
     const adapter = new OpenAICompatibleAdapter({
+      provider: "openai",
       baseUrl: "https://api.openai.com/v1",
       apiKey: "sk-test-mock-api-key",
       defaultModel: "gpt-4o-mini",
@@ -23,8 +25,38 @@ describe("OpenAICompatibleAdapter AI Service", () => {
     expect(adapter.getProviderName()).toContain("OpenAI-Compatible");
   });
 
+  it("supports Google Gemini Free Tier provider configuration", () => {
+    const adapter = new OpenAICompatibleAdapter({
+      provider: "gemini",
+      apiKey: "AIzaSyFakeKeyForTest",
+    });
+
+    expect(adapter.isConfigured()).toBe(true);
+    expect(adapter.getProviderName()).toContain("Google Gemini");
+  });
+
+  it("supports Groq Developer Free Tier provider configuration", () => {
+    const adapter = new OpenAICompatibleAdapter({
+      provider: "groq",
+      apiKey: "gsk_FakeGroqKeyForTest",
+    });
+
+    expect(adapter.isConfigured()).toBe(true);
+    expect(adapter.getProviderName()).toContain("Groq");
+  });
+
+  it("supports Local Ollama without requiring an API key", () => {
+    const adapter = new OpenAICompatibleAdapter({
+      provider: "ollama",
+    });
+
+    expect(adapter.isConfigured()).toBe(true);
+    expect(adapter.getProviderName()).toContain("Ollama");
+  });
+
   it("throws clear error when generateChatCompletion is called without configuration", async () => {
     const adapter = new OpenAICompatibleAdapter({
+      provider: "openai",
       apiKey: "",
     });
 
@@ -33,6 +65,35 @@ describe("OpenAICompatibleAdapter AI Service", () => {
         messages: [{ role: "user", content: "Hello" }],
       })
     ).rejects.toThrow(/AI provider is not configured/);
+  });
+
+  it("fails safely when free quota is exhausted (HTTP 429) without charging money", async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      status: 429,
+      ok: false,
+      statusText: "Too Many Requests",
+      text: async () => JSON.stringify({ error: { message: "Quota exceeded" } }),
+    });
+
+    const originalFetch = global.fetch;
+    global.fetch = mockFetch as any;
+
+    try {
+      const adapter = new OpenAICompatibleAdapter({
+        provider: "gemini",
+        apiKey: "AIzaSyFakeKey",
+      });
+
+      const result = await adapter.generateChatCompletion({
+        messages: [{ role: "user", content: "Summarize notes" }],
+      });
+
+      expect(result.isQuotaExhausted).toBe(true);
+      expect(result.finishReason).toBe("quota_exhausted");
+      expect(result.content).toContain("free quota has been reached");
+    } finally {
+      global.fetch = originalFetch;
+    }
   });
 
   it("sends standard OpenAI-compatible chat payload and parses response", async () => {
@@ -55,7 +116,6 @@ describe("OpenAICompatibleAdapter AI Service", () => {
       }),
     });
 
-    // Temporarily stub global fetch
     const originalFetch = global.fetch;
     global.fetch = mockFetch as any;
 
