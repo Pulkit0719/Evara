@@ -1,7 +1,7 @@
 # Project TODO
 
 - [x] Establish a refined Evara visual system with responsive navigation, accessible components, and a discreet privacy-first tone.
-- [x] Implement Manus OAuth entry, sign-out, protected application shell, and an authenticated empty state.
+- [x] Implement independent authentication entry, local credentials & session sign-out, protected application shell, and an authenticated empty state.
 - [x] Add onboarding persistence for display name, cycle length, period duration, most recent period, and selected tracking goals.
 - [x] Add user-owned period log persistence with create, update, delete, history, flow intensity, averages, and clearly labelled estimated next-period dates.
 - [x] Add responsive interactive monthly cycle calendar with recorded periods, estimated periods, symptoms, wellness indicators, and cycle-phase context.
