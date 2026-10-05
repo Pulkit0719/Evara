@@ -40,7 +40,7 @@ export function useAuth(options?: UseAuthOptions) {
   }, [logoutMutation, utils]);
 
   const state = useMemo(() => {
-    // Removed manus-runtime-user-info localStorage usage
+    // Server-controlled session state via tRPC auth.me
     return {
       user: meQuery.data ?? null,
       loading: meQuery.isLoading || logoutMutation.isPending,

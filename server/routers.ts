@@ -1,7 +1,6 @@
-import { COOKIE_NAME } from "@shared/const";
-import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
+import { router } from "./_core/trpc";
+import { authRouter } from "./routers/auth";
 import { calendarRouter } from "./routers/calendar";
 import { insightsRouter } from "./routers/insights";
 import { periodsRouter } from "./routers/periods";
@@ -12,13 +11,7 @@ import { trackingRouter } from "./routers/tracking";
 
 export const appRouter = router({
   system: systemRouter,
-  auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
-    logout: publicProcedure.mutation(({ ctx }) => {
-      ctx.res.clearCookie(COOKIE_NAME, { ...getSessionCookieOptions(ctx.req), maxAge: -1 });
-      return { success: true } as const;
-    }),
-  }),
+  auth: authRouter,
   profile: profileRouter,
   periods: periodsRouter,
   tracking: trackingRouter,

@@ -21,6 +21,7 @@ import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { Route, Switch, useLocation } from "wouter";
 import { startLogin } from "./const";
+import { AuthModal } from "./components/AuthModal";
 
 function AccessGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth(); const [location, setLocation] = useLocation(); const profile = trpc.profile.get.useQuery(undefined, { enabled: Boolean(user) }); const onboarding = location === "/onboarding";
@@ -32,6 +33,16 @@ function AccessGate({ children }: { children: React.ReactNode }) {
   if (onboarding) return <Onboarding />;
   return <DashboardLayout>{children}</DashboardLayout>;
 }
-function ProtectedDashboard() { return <AccessGate><Dashboard /></AccessGate>; } function ProtectedCycle() { return <AccessGate><Cycle /></AccessGate>; } function ProtectedCalendar() { return <AccessGate><CalendarPage /></AccessGate>; } function ProtectedSymptoms() { return <AccessGate><Symptoms /></AccessGate>; } function ProtectedWellness() { return <AccessGate><Wellness /></AccessGate>; } function ProtectedInsights() { return <AccessGate><Insights /></AccessGate>; } function ProtectedReports() { return <AccessGate><Reports /></AccessGate>; } function ProtectedReminders() { return <AccessGate><Reminders /></AccessGate>; } function ProtectedSettings() { return <AccessGate><Settings /></AccessGate>; } function ProtectedOnboarding() { return <AccessGate><Onboarding /></AccessGate>; }
+function ProtectedDashboard() { return <AccessGate><Dashboard /></AccessGate>; }
+function ProtectedCycle() { return <AccessGate><Cycle /></AccessGate>; }
+function ProtectedCalendar() { return <AccessGate><CalendarPage /></AccessGate>; }
+function ProtectedSymptoms() { return <AccessGate><Symptoms /></AccessGate>; }
+function ProtectedWellness() { return <AccessGate><Wellness /></AccessGate>; }
+function ProtectedInsights() { return <AccessGate><Insights /></AccessGate>; }
+function ProtectedReports() { return <AccessGate><Reports /></AccessGate>; }
+function ProtectedReminders() { return <AccessGate><Reminders /></AccessGate>; }
+function ProtectedSettings() { return <AccessGate><Settings /></AccessGate>; }
+function ProtectedOnboarding() { return <AccessGate><Onboarding /></AccessGate>; }
+
 function Router() { return <Switch><Route path="/" component={Home} /><Route path="/onboarding" component={ProtectedOnboarding} /><Route path="/app" component={ProtectedDashboard} /><Route path="/cycle" component={ProtectedCycle} /><Route path="/calendar" component={ProtectedCalendar} /><Route path="/symptoms" component={ProtectedSymptoms} /><Route path="/wellness" component={ProtectedWellness} /><Route path="/insights" component={ProtectedInsights} /><Route path="/reports" component={ProtectedReports} /><Route path="/reminders" component={ProtectedReminders} /><Route path="/settings" component={ProtectedSettings} /><Route path="/404" component={NotFound} /><Route component={NotFound} /></Switch>; }
-export default function App() { return <ErrorBoundary><ThemeProvider defaultTheme="light"><TooltipProvider><Toaster /><Router /></TooltipProvider></ThemeProvider></ErrorBoundary>; }
+export default function App() { return <ErrorBoundary><ThemeProvider defaultTheme="light"><TooltipProvider><Toaster /><AuthModal /><Router /></TooltipProvider></ThemeProvider></ErrorBoundary>; }

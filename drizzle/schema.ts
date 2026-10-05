@@ -1,17 +1,33 @@
 import { index, int, json, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 
-/** Core identity table supplied by the Manus OAuth scaffold. */
+/** Core identity table for user accounts. Supports both local authentication and legacy accounts. */
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
-  loginMethod: varchar("loginMethod", { length: 64 }),
+  passwordHash: varchar("passwordHash", { length: 255 }),
+  loginMethod: varchar("loginMethod", { length: 64 }).default("local"),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
-});
+}, table => ({
+  emailIdx: index("users_email_idx").on(table.email),
+}));
+
+/** Server-controlled revocable sessions table. */
+export const sessions = mysqlTable("sessions", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  expiresAt: timestamp("expiresAt").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  userAgent: varchar("userAgent", { length: 255 }),
+  ipAddress: varchar("ipAddress", { length: 45 }),
+}, table => ({
+  userIdx: index("sessions_user_idx").on(table.userId),
+  expiresAtIdx: index("sessions_expires_at_idx").on(table.expiresAt),
+}));
 
 export const userProfiles = mysqlTable("userProfiles", {
   id: int("id").autoincrement().primaryKey(),
@@ -91,6 +107,8 @@ export const reminders = mysqlTable("reminders", {
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
+export type Session = typeof sessions.$inferSelect;
+export type InsertSession = typeof sessions.$inferInsert;
 export type UserProfile = typeof userProfiles.$inferSelect;
 export type PeriodLog = typeof periodLogs.$inferSelect;
 export type SymptomLog = typeof symptomLogs.$inferSelect;
