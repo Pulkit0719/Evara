@@ -1,0 +1,21 @@
+import { useAuth } from "@/_core/hooks/useAuth";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { CalendarDays, CircleHelp, Droplets, FileText, Flower2, HeartPulse, LayoutDashboard, LogOut, Menu, MoonStar, Settings2, Sparkles, X } from "lucide-react";
+import { useState } from "react";
+import { useLocation } from "wouter";
+
+const navigation = [
+  { label: "Overview", path: "/app", icon: LayoutDashboard }, { label: "Cycle log", path: "/cycle", icon: Flower2 }, { label: "Calendar", path: "/calendar", icon: CalendarDays }, { label: "Symptoms", path: "/symptoms", icon: HeartPulse }, { label: "Daily check-in", path: "/wellness", icon: Droplets }, { label: "Insights", path: "/insights", icon: Sparkles }, { label: "Health summary", path: "/reports", icon: FileText }, { label: "Reminders", path: "/reminders", icon: MoonStar },
+];
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const { user, logout } = useAuth();
+  const [location, setLocation] = useLocation();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const active = navigation.find(item => item.path === location)?.label ?? "Settings";
+  const initials = (user?.name || user?.email || "E").split(" ").map(name => name[0]).join("").slice(0, 2).toUpperCase();
+  const navigate = (path: string) => { setLocation(path); setMobileOpen(false); };
+  return <div className="app-shell"><aside className={`app-sidebar ${mobileOpen ? "app-sidebar--open" : ""}`} aria-label="Evara navigation"><div className="app-sidebar__top"><button className="brand" onClick={() => navigate("/app")} aria-label="Go to Evara overview"><span className="brand-mark"><Flower2 className="h-5 w-5" /></span><span>Evara</span></button><button className="sidebar-close" onClick={() => setMobileOpen(false)} aria-label="Close navigation"><X className="h-5 w-5" /></button></div><p className="sidebar-label">YOUR WELLNESS SPACE</p><nav className="sidebar-nav">{navigation.map(item => { const Icon = item.icon; const isActive = location === item.path; return <button key={item.path} className={`nav-item ${isActive ? "nav-item--active" : ""}`} onClick={() => navigate(item.path)} aria-current={isActive ? "page" : undefined}><Icon className="h-[18px] w-[18px]" aria-hidden="true" /><span>{item.label}</span></button>; })}</nav><div className="sidebar-bottom"><button className={`nav-item ${location === "/settings" ? "nav-item--active" : ""}`} onClick={() => navigate("/settings")}><Settings2 className="h-[18px] w-[18px]" aria-hidden="true" /><span>Settings & privacy</span></button><div className="sidebar-support"><CircleHelp className="h-4 w-4" aria-hidden="true" /><span>Wellness information, not a diagnosis.</span></div><div className="account-row"><Avatar className="h-9 w-9 border border-white/80"><AvatarFallback className="bg-[#ead8d6] text-xs font-semibold text-[#65464c]">{initials}</AvatarFallback></Avatar><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-[#35262f]">{user?.name || "Your Evara space"}</p><p className="truncate text-xs text-[#75656e]">Private account</p></div><Tooltip><TooltipTrigger asChild><button className="icon-button" onClick={logout} aria-label="Sign out"><LogOut className="h-4 w-4" /></button></TooltipTrigger><TooltipContent>Sign out</TooltipContent></Tooltip></div></div></aside>{mobileOpen ? <button className="mobile-scrim" aria-label="Close navigation" onClick={() => setMobileOpen(false)} /> : null}<section className="app-main"><header className="app-header"><div className="flex items-center gap-3"><button className="mobile-menu" onClick={() => setMobileOpen(true)} aria-label="Open navigation"><Menu className="h-5 w-5" /></button><div><p className="eyebrow">Evara / your wellbeing</p><h1 className="app-title">{active}</h1></div></div><div className="hidden items-center gap-2 sm:flex"><span className="privacy-pill"><span className="privacy-dot" />Private & secure</span><Button variant="ghost" size="sm" onClick={() => navigate("/settings")}>Privacy</Button></div></header><main className="app-content">{children}</main></section></div>;
+}

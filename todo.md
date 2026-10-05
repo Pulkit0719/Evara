@@ -1,0 +1,26 @@
+# Project TODO
+
+- [x] Establish a refined Evara visual system with responsive navigation, accessible components, and a discreet privacy-first tone.
+- [x] Implement Manus OAuth entry, sign-out, protected application shell, and an authenticated empty state.
+- [x] Add onboarding persistence for display name, cycle length, period duration, most recent period, and selected tracking goals.
+- [x] Add user-owned period log persistence with create, update, delete, history, flow intensity, averages, and clearly labelled estimated next-period dates.
+- [x] Add responsive interactive monthly cycle calendar with recorded periods, estimated periods, symptoms, wellness indicators, and cycle-phase context.
+- [x] Add symptom-log persistence and controls with the required predefined symptoms, exactly mild/moderate/severe severity, notes, and edit/delete support.
+- [x] Add daily wellness check-in persistence for mood, energy, sleep, water, activity, stress, pain, and notes.
+- [x] Build dashboard insights that distinguish recorded data from estimates and show cycle, symptom, mood, sleep, and pain patterns.
+- [x] Add private reminder persistence for expected period, daily check-in, medication, and appointments with privacy-friendly notification preview copy.
+- [x] Add data-deletion controls for health records and the user account.
+- [x] Add automated validation and calculation tests for health-record workflows.
+- [x] Verify desktop and mobile rendering, keyboard access, loading/error/empty states, TypeScript, and test suite before delivery.
+- [x] Render the full estimated period range on the calendar and add explicit calendar loading and error states.
+- [x] Surface recorded symptom-timing context in the insights experience with careful non-diagnostic language.
+- [x] Run the Evara health-record test suite and verify the added test coverage passes.
+- [x] Add explicit retryable query-error states across the cycle, symptom, wellness, reminder, dashboard, and insight views.
+- [x] Verify and document keyboard accessibility for primary navigation, forms, and interactive calendar controls before final delivery.
+- [x] Audit all client routes, tRPC procedures, database access helpers, authentication, environment usage, and the deployed user experience.
+- [x] Produce an in-project technical audit classifying real functionality, incomplete behavior, hardcoding, security concerns, and product gaps by severity.
+- [x] Verify backend ownership checks and add regression tests for unauthorized health-record access and mutation attempts.
+- [x] Implement a user-owned wellness data export and a doctor-ready three-month health summary based only on authenticated records.
+- [x] Remove or clearly disclose any remaining nonfunctional, placeholder, or future-only user interface elements found in the audit.
+- [x] Expand edge-case, validation, accessibility, responsiveness, and security regression tests for the upgraded feature set.
+- [x] Add code-backed responsive regression coverage for Evara’s navigation, tracking forms, calendar, and health-summary layout.

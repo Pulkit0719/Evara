@@ -1,0 +1,1 @@
+ALTER TABLE `periodLogs` ADD CONSTRAINT `periodLogs_owner_start_unique` UNIQUE(`userId`,`startDate`);
