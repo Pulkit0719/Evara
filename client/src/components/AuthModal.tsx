@@ -97,7 +97,7 @@ export function AuthModal() {
   const handleClaim = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
-    claimMutation.mutate({ email, newPassword: password, openId: legacyOpenId || undefined });
+    claimMutation.mutate({ email, newPassword: password, verificationToken: legacyOpenId });
   };
 
   const isPending =
@@ -241,7 +241,7 @@ export function AuthModal() {
             <form onSubmit={handleClaim} className="space-y-3 pt-2">
               <div className="p-2.5 rounded bg-[#f3ebe4] border border-[#e4d7ce] text-[11px] leading-relaxed text-[#6d5a65]">
                 <Sparkles className="inline h-3.5 w-3.5 mr-1 text-[#8f5261]" />
-                <strong>Existing Account?</strong> Link your previous account to a secure local password. All your logged cycles, symptoms, and wellness history will remain intact.
+                <strong>Existing Account?</strong> Link your previous account by verifying your account ownership key. All your logged cycles, symptoms, and wellness history will remain intact.
               </div>
 
               <div className="space-y-1.5">
@@ -272,13 +272,14 @@ export function AuthModal() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="legacy-openid" className="text-xs text-[#523d4a]">Legacy OpenID (optional)</Label>
+                <Label htmlFor="legacy-openid" className="text-xs text-[#523d4a]">Account Verification Key *</Label>
                 <Input
                   id="legacy-openid"
                   type="text"
-                  placeholder="Optional verification ID if known"
+                  placeholder="Legacy verification token or OpenID"
                   value={legacyOpenId}
                   onChange={(e) => setLegacyOpenId(e.target.value)}
+                  required
                   className="bg-white/80 border-[#d9ccc3] text-sm"
                 />
               </div>

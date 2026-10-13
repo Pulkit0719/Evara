@@ -15,7 +15,7 @@ describe("Independent Storage Service", () => {
   });
 
   it("stores and retrieves files using local disk fallback", async () => {
-    const testContent = "Hello Uptrail Storage Verification " + Date.now();
+    const testContent = "Hello Evara Storage Verification " + Date.now();
     const result = await storagePut("test/report.txt", testContent, "text/plain");
 
     expect(result.key).toContain("test/report");

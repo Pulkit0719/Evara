@@ -1,7 +1,7 @@
 export const ENV = {
-  appId: process.env.VITE_APP_ID ?? "uptrail",
-  sessionSecret: process.env.SESSION_SECRET ?? process.env.JWT_SECRET ?? "uptrail-default-session-secret-key-change-me",
-  cookieSecret: process.env.SESSION_SECRET ?? process.env.JWT_SECRET ?? "uptrail-default-session-secret-key-change-me",
+  appId: process.env.VITE_APP_ID ?? "evara",
+  sessionSecret: process.env.SESSION_SECRET ?? "evara-default-session-secret-key-change-me",
+  cookieSecret: process.env.SESSION_SECRET ?? "evara-default-session-secret-key-change-me",
   databaseUrl: process.env.DATABASE_URL ?? "",
   ownerUserId: process.env.OWNER_USER_ID ? parseInt(process.env.OWNER_USER_ID, 10) : undefined,
   ownerEmail: process.env.OWNER_EMAIL ?? "",
@@ -21,11 +21,14 @@ export const ENV = {
   s3AccessKeyId: process.env.S3_ACCESS_KEY_ID ?? "",
   s3SecretAccessKey: process.env.S3_SECRET_ACCESS_KEY ?? "",
 
-  // Notifications
+  // Notifications (Webhook)
   notificationWebhookUrl: process.env.NOTIFICATION_WEBHOOK_URL ?? "",
 
-  // Legacy fallback aliases for backward compatibility during migration
-  forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
-  forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
-  oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
+  // Provider-independent Email Configuration (SMTP)
+  emailProvider: process.env.EMAIL_PROVIDER ?? "smtp",
+  smtpHost: process.env.SMTP_HOST ?? "",
+  smtpPort: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587,
+  smtpUser: process.env.SMTP_USER ?? "",
+  smtpPassword: process.env.SMTP_PASSWORD ?? "",
+  emailFrom: process.env.EMAIL_FROM ?? "noreply@evara.app",
 };

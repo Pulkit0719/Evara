@@ -217,7 +217,7 @@ const resolveApiUrl = () => {
   return baseUrl.endsWith("/chat/completions") ? baseUrl : `${baseUrl.replace(/\/$/, "")}/chat/completions`;
 };
 
-const getApiKey = () => ENV.aiApiKey || ENV.forgeApiKey || "";
+const getApiKey = () => ENV.aiApiKey || "";
 
 const assertApiKey = () => {
   if (!getApiKey()) {

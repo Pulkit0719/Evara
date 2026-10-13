@@ -1,5 +1,5 @@
 # ==============================================================================
-# Multi-stage Dockerfile for Uptrail
+# Multi-stage Dockerfile for Evara
 # 100% self-hosted, independent, zero-cost production container
 # ==============================================================================
 

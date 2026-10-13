@@ -119,11 +119,17 @@ export const authRouter = router({
    */
   claimLegacyAccount: publicProcedure
     .input(
-      z.object({
-        email: z.string().email("Please provide a valid email address."),
-        newPassword: z.string().min(8, "New password must be at least 8 characters long."),
-        openId: z.string().optional(),
-      })
+      z
+        .object({
+          email: z.string().email("Please provide a valid email address."),
+          newPassword: z.string().min(8, "New password must be at least 8 characters long."),
+          verificationToken: z.string().min(1, "Verification token is required.").optional(),
+          openId: z.string().min(1, "Legacy OpenID verification is required.").optional(),
+        })
+        .refine(data => Boolean(data.verificationToken || data.openId), {
+          message: "A legacy verification token or OpenID is required to claim an existing account. Email-only claiming is prohibited.",
+          path: ["verificationToken"],
+        })
     )
     .mutation(async ({ input, ctx }) => {
       const clientIp = (ctx.req.ip || (ctx.req.headers["x-forwarded-for"] as string) || "127.0.0.1").split(",")[0].trim();
@@ -146,11 +152,12 @@ export const authRouter = router({
         });
       }
 
-      if (input.openId && user.openId && user.openId !== input.openId) {
+      const providedToken = (input.verificationToken || input.openId || "").trim();
+      if (!providedToken || !user.openId || providedToken !== user.openId) {
         recordAuthAttempt(clientIp);
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: "Supplied legacy identifier does not match account records.",
+          message: "Invalid verification credentials. Email-only account claiming is strictly prohibited. Please provide your legitimate legacy verification token.",
         });
       }
 
