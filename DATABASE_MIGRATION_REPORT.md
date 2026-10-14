@@ -1,4 +1,4 @@
-# Database Migration & Data Integrity Report — Uptrail
+# Database Migration & Data Integrity Report — Evara
 
 This report documents the database architecture, schema migrations, and relational integrity guarantees ensuring that all existing user accounts, profiles, period logs, symptoms, wellness records, and reminders are 100% preserved without data loss or corruption.
 
@@ -6,7 +6,7 @@ This report documents the database architecture, schema migrations, and relation
 
 ## 1. Schema Inventory & Relationship Graph
 
-Uptrail's database is modeled using **Drizzle ORM** with MySQL / TiDB compatibility.
+Evara's database is modeled using **Drizzle ORM** with MySQL / TiDB compatibility.
 
 ### Relational Entity Graph:
 ```text

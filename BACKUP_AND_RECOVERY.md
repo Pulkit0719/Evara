@@ -1,6 +1,6 @@
-# Database Backup & Recovery Guide — Uptrail
+# Database Backup & Recovery Guide — Evara
 
-This guide provides a free, self-managed backup and disaster recovery strategy for Uptrail without requiring any paid backup software or SaaS subscription.
+This guide provides a free, self-managed backup and disaster recovery strategy for Evara without requiring any paid backup software or SaaS subscription.
 
 ---
 
@@ -14,9 +14,9 @@ This guide provides a free, self-managed backup and disaster recovery strategy f
 $DB_HOST = "localhost"
 $DB_PORT = "3306"
 $DB_USER = "root"
-$DB_NAME = "uptrail"
+$DB_NAME = "evara"
 $TIMESTAMP = (Get-Date -Format "yyyy-MM-dd_HH-mm-ss")
-$BACKUP_FILE = "backup_uptrail_$TIMESTAMP.sql"
+$BACKUP_FILE = "backup_evara_$TIMESTAMP.sql"
 
 # Execute dump
 mysqldump -h $DB_HOST -P $DB_PORT -u $DB_USER -p --single-transaction --quick --routines --triggers $DB_NAME > $BACKUP_FILE
@@ -29,9 +29,9 @@ Write-Host "Backup completed: $BACKUP_FILE"
 DB_HOST="localhost"
 DB_PORT="3306"
 DB_USER="root"
-DB_NAME="uptrail"
+DB_NAME="evara"
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
-BACKUP_FILE="backup_uptrail_${TIMESTAMP}.sql"
+BACKUP_FILE="backup_evara_${TIMESTAMP}.sql"
 
 mysqldump -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p \
   --single-transaction --quick --routines --triggers "$DB_NAME" > "$BACKUP_FILE"
@@ -43,16 +43,16 @@ echo "Backup completed: $BACKUP_FILE"
 
 ## 2. Docker Container Backup
 
-If running Uptrail with the local `docker-compose.yml` stack:
+If running Evara with the local `docker-compose.yml` stack:
 
 #### Backup:
 ```bash
-docker exec -i uptrail_mysql mysqldump -u root -proot_password --single-transaction uptrail_db > uptrail_docker_backup.sql
+docker exec -i evara_mysql mysqldump -u root -proot_password --single-transaction evara_db > evara_docker_backup.sql
 ```
 
 #### Restore:
 ```bash
-docker exec -i uptrail_mysql mysql -u root -proot_password uptrail_db < uptrail_docker_backup.sql
+docker exec -i evara_mysql mysql -u root -proot_password evara_db < evara_docker_backup.sql
 ```
 
 ---
@@ -63,12 +63,12 @@ To restore your database from a SQL backup file:
 
 ### Windows (PowerShell):
 ```powershell
-Get-Content backup_uptrail_YYYY-MM-DD_HH-mm-ss.sql | mysql -h localhost -P 3306 -u root -p uptrail
+Get-Content backup_evara_YYYY-MM-DD_HH-mm-ss.sql | mysql -h localhost -P 3306 -u root -p evara
 ```
 
 ### Linux / macOS (Bash):
 ```bash
-mysql -h localhost -P 3306 -u root -p uptrail < backup_uptrail_YYYY-MM-DD_HH-mm-ss.sql
+mysql -h localhost -P 3306 -u root -p evara < backup_evara_YYYY-MM-DD_HH-mm-ss.sql
 ```
 
 ---

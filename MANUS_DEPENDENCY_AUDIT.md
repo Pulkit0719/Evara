@@ -1,4 +1,4 @@
-# Manus Dependency Audit — Uptrail
+# Manus Dependency Audit — Evara
 
 This document provides a comprehensive dependency map and technical audit of all components identified during the codebase inspection, classifying every item by its purpose, dependency level, usage, risk profile, and required action.
 
