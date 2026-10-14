@@ -5,7 +5,6 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
-import { serveStatic } from "./vite";
 import { getDb } from "../db";
 
 export function createExpressApp(): Express {
@@ -110,11 +109,6 @@ export function createExpressApp(): Express {
       createContext,
     })
   );
-
-  // Serve static build in non-development mode (ignored if on edge/serverless CDN)
-  if (process.env.NODE_ENV !== "development") {
-    serveStatic(app);
-  }
 
   return app;
 }
