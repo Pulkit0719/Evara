@@ -9,6 +9,7 @@ Evara is built from the ground up to operate with zero vendor lock-in. It functi
 ## Live Production Deployment
 
 - **Production URL**: [https://evara-gray.vercel.app](https://evara-gray.vercel.app)
+- **Release Tag**: [`v1.0.0-independent`](https://github.com/Pulkit0719/Evara/releases/tag/v1.0.0-independent)
 - **Deployment Platform**: Vercel (Node.js 22 Serverless + Global Edge CDN)
 - **Production Database**: TiDB Cloud Serverless (MySQL 8.0 Compatible, AWS Tokyo)
 - **Health Probes**:
@@ -184,6 +185,17 @@ The stack includes:
 4. **Legacy Account Protection**: Legacy account claiming requires verification credentials matching the original account record (`verificationToken`). Email-only claiming is strictly blocked.
 5. **Storage Authorization**: File proxy routes (`/api/storage/*`) require authentication and verify user ownership on user-scoped paths before returning assets or redirecting to presigned URLs.
 6. **CSRF & Origin Protection**: Mutation requests (`POST`, `PUT`, `DELETE`, `PATCH`) to `/api/*` are validated against the request `Host` header to prevent cross-site form posting. Cookies use `SameSite=Lax` and `HttpOnly`.
+
+---
+
+## Known Limitations
+
+1. **No Self-Service Password Reset**: Account recovery currently requires contacting an administrator; email-based password reset is planned for the post-launch phase.
+2. **No Email Verification**: Accounts are active immediately upon registration without an email confirmation round-trip.
+3. **Reminders are Preference-Only**: Reminders are stored in the database, but outbound SMS/push notifications are not yet dispatched (requires external background worker).
+4. **AI Features are Optional & Disabled by Default**: Core cycle tracking, wellness logs, and reports run 100% offline and free of third-party AI costs.
+5. **Ephemeral Storage Without S3**: Local filesystem uploads do not persist across serverless instances; durable storage requires an S3-compatible bucket (AWS S3 or Cloudflare R2).
+6. **Serverless Execution Limits**: Max request execution timeout is 10 seconds; long-running processes cannot execute inside the HTTP request handler.
 
 ---
 
