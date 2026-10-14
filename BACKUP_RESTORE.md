@@ -6,12 +6,35 @@ This guide details the automated backup, restoration, retention, and disaster re
 
 ## 1. Automated Production Backup
 
-### Scripted Backup Tool: `scripts/backup-db.cjs`
+### Primary Encrypted Backup Tool: `scripts/backup-encrypted.cjs`
 
-Evara includes a built-in automated backup tool that connects over TLS to your database, exports complete schemas and table data, generates SHA-256 checksums, and purges expired backups:
+Evara provides a zero-cost, AES-256-GCM encrypted backup workflow that stores backups in a dedicated user-controlled folder outside the Git repository:
 
 ```bash
-# Run backup using connection string from .env
+# Run encrypted backup (copies to C:\Users\pulki\Evara-Backups and backups/)
+npm run db:backup
+# or
+node scripts/backup-encrypted.cjs
+```
+
+- **Primary Destination**: `C:\Users\pulki\Evara-Backups\evara-prod-<timestamp>.sql.gz.enc`
+- **Integrity File**: `*.sql.gz.enc.sha256`
+- **Security**: Authenticated `AES-256-GCM` client-side encryption + `gzip` compression (Level 9).
+- **Retention**: Automatic 7-day retention cleanup.
+
+### Rehearsal & Restore Tool: `scripts/restore-encrypted.cjs`
+
+```bash
+# Verify integrity and run rehearsal restore into temporary database:
+npm run db:restore -- --drop-after
+```
+
+### Unencrypted Raw SQL Tool: `scripts/backup-db.cjs`
+
+For quick local SQL inspections:
+
+```bash
+# Run raw SQL backup using connection string from .env
 node scripts/backup-db.cjs
 ```
 
