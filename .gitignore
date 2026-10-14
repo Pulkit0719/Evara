@@ -105,6 +105,9 @@ temp/
 *.db
 *.sqlite
 *.sqlite3
+backups/
+*.sql
+*.sql.gz
 
 # Local storage and file uploads
 .storage/

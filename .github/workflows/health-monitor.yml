@@ -1,0 +1,49 @@
+name: Production Health Monitor
+
+on:
+  schedule:
+    # Run every 6 hours to monitor production uptime
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+
+jobs:
+  health-check:
+    name: Probe Production Uptime & Readiness
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Verify Liveness Probe (/healthz)
+        run: |
+          echo "Pinging production liveness probe..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" https://evara-gray.vercel.app/healthz)
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response Body: $BODY"
+          if [ "$HTTP_CODE" -ne 200 ]; then
+            echo "::error::Liveness check failed with status $HTTP_CODE"
+            exit 1
+          fi
+          echo "$BODY" | grep -q '"status":"ok"' || { echo "::error::Unexpected body format"; exit 1; }
+
+      - name: Verify Readiness Probe (/readyz - Database Probe)
+        run: |
+          echo "Pinging production readiness probe..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" https://evara-gray.vercel.app/readyz)
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response Body: $BODY"
+          if [ "$HTTP_CODE" -ne 200 ]; then
+            echo "::error::Readiness check failed with status $HTTP_CODE"
+            exit 1
+          fi
+          echo "$BODY" | grep -q '"database":"connected"' || { echo "::error::Database not connected"; exit 1; }
+
+      - name: Verify Edge Security Headers
+        run: |
+          echo "Checking security headers on production domain..."
+          HEADERS=$(curl -s -I https://evara-gray.vercel.app/)
+          echo "$HEADERS" | grep -i "x-content-type-options: nosniff" || { echo "::error::Missing nosniff header"; exit 1; }
+          echo "$HEADERS" | grep -i "x-frame-options: SAMEORIGIN" || { echo "::error::Missing SAMEORIGIN header"; exit 1; }
+          echo "All edge security headers verified."
