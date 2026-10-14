@@ -6,6 +6,18 @@ Evara is built from the ground up to operate with zero vendor lock-in. It functi
 
 ---
 
+## Live Production Deployment
+
+- **Production URL**: [https://evara-gray.vercel.app](https://evara-gray.vercel.app)
+- **Deployment Platform**: Vercel (Node.js 22 Serverless + Global Edge CDN)
+- **Production Database**: TiDB Cloud Serverless (MySQL 8.0 Compatible, AWS Tokyo)
+- **Health Probes**:
+  - Liveness: [`/healthz`](https://evara-gray.vercel.app/healthz) (200 OK)
+  - Readiness: [`/readyz`](https://evara-gray.vercel.app/readyz) (200 OK via live SQL probe)
+
+
+---
+
 ## Features
 
 - **Cycle Tracking**: Log periods, track flow intensity, record cycle history, and calculate average cycle lengths with data-driven estimates.

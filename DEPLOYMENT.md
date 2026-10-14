@@ -1,79 +1,97 @@
 # Evara Deployment Guide
 
-Evara is designed for independent deployment on any standard Node.js runtime or container host.
-
-## Recommended Architecture
-
-```text
-[ GitHub Repository ]
-        │
-        ▼ (Git Push / Webhook)
-[ Host / Container Platform ] (Docker, VPS, Render, Railway, Fly.io)
-        │
-        ├── Node.js / Express Application (Port 3000)
-        │     └── Serves Vite Client & tRPC API (Same-Origin)
-        │
-        ├── MySQL Database (Docker MySQL 8.0, TiDB Cloud, or Managed DB)
-        │
-        └── (Optional) S3-Compatible Storage (MinIO, Cloudflare R2, AWS S3)
-```
+Evara is designed for independent, production deployment with zero platform vendor lock-in. It is fully adapted for deployment on **Vercel** with **TiDB Cloud Serverless (MySQL 8.0)**, as well as Docker, VPS, or any standard container runtime.
 
 ---
 
-## Deployment Options
+## Production Deployment: Vercel + TiDB Cloud
 
-### Option 1: Docker / Docker Compose (Recommended)
+### 1. Architecture
 
-1. Clone repository to server:
+```text
+[ User Browser ]
+       │ HTTPS
+       ▼
+[ Vercel Global Edge Network ]
+  ├── Static Assets (SPA) ──► dist/public (CDN Edge Caching)
+  └── API & Health Routes  ──► api/index.js (Node.js 22 Serverless Function)
+                                   │
+                                   ├── Express Middleware & tRPC Router
+                                   ├── Security Headers & Same-Origin CSRF
+                                   ├── Scrypt Authentication & Revocable Sessions
+                                   │ TLS 1.3
+                                   ▼
+                       [ TiDB Cloud Serverless ]
+                       (Tokyo AWS / MySQL 8.0 Compatible)
+                       Database: `evara`
+```
+
+### 2. Live Production Endpoints
+
+- **Live URL**: `https://evara-gray.vercel.app`
+- **Liveness Probe**: `GET https://evara-gray.vercel.app/healthz` (200 OK)
+- **Readiness Probe**: `GET https://evara-gray.vercel.app/readyz` (200 OK, executes `SELECT 1` on TiDB)
+- **tRPC API Root**: `https://evara-gray.vercel.app/api/trpc`
+
+### 3. Vercel Configuration Settings
+
+In **Vercel → Project → Settings**:
+
+- **Framework Preset**: `Other`
+- **Root Directory**: `./`
+- **Build Command**: `pnpm build`
+- **Output Directory**: `dist/public`
+- **Node.js Version**: `22.x`
+
+#### Environment Variables (Production Scope)
+
+| Name | Type | Description |
+| :--- | :--- | :--- |
+| `NODE_ENV` | Plaintext | Set to `production`. Enables HSTS and secure cookie policies. |
+| `DATABASE_URL` | Secret | TiDB Cloud TLS connection string (`mysql://user:pass@host:4000/evara?ssl={"rejectUnauthorized":true}`) |
+| `SESSION_SECRET` | Secret | Cryptographically secure 32-byte (64-character hex) random key. |
+
+*Note: Do NOT configure `PORT` in Vercel. Vercel automatically manages edge listeners.*
+
+---
+
+## Alternative Deployment Options
+
+### Option 2: Docker / Container Runtime
+
+1. Clone repository:
    ```bash
-   git clone <repo-url> /opt/evara
+   git clone https://github.com/Pulkit0719/Evara.git /opt/evara
    cd /opt/evara
    ```
 2. Configure `.env`:
    ```bash
    cp .env.example .env
-   # Update DATABASE_URL and SESSION_SECRET
+   # Set DATABASE_URL and SESSION_SECRET
    ```
-3. Launch container stack:
+3. Run container stack:
    ```bash
    docker compose up -d --build
    ```
 
-### Option 2: Linux VPS / Systemd (Ubuntu/Debian)
+### Option 3: Standalone Linux VPS / PM2
 
-1. Install Node.js 20 and pnpm:
+1. Install Node.js 22 and pnpm:
    ```bash
-   curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+   curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
    sudo apt-get install -y nodejs
    sudo corepack enable
    ```
-2. Build application:
+2. Build and run:
    ```bash
    pnpm install --frozen-lockfile
    pnpm build
-   pnpm db:push
+   NODE_ENV=production node dist/index.js
    ```
-3. Run under systemd service or PM2:
-   ```bash
-   pm2 start dist/index.js --name evara
-   ```
-
-### Option 3: Cloud Platforms (Railway, Render, Fly.io)
-
-1. Link your personal GitHub repository.
-2. Build command:
-   ```bash
-   pnpm install && pnpm build && pnpm db:push
-   ```
-3. Start command:
-   ```bash
-   pnpm start
-   ```
-4. Configure environment variables in platform dashboard (`DATABASE_URL`, `SESSION_SECRET`, `NODE_ENV=production`).
 
 ---
 
-## Health Checks
+## Health Checks & Monitoring
 
-- **Liveness Probe**: `GET /healthz` (returns 200 `{ status: "ok" }`).
-- **Readiness Probe**: `GET /readyz` (executes `SELECT 1` on MySQL, returns 200 `{ status: "ready", database: "connected" }`).
+- `/healthz`: Liveness check verifying the HTTP process/function is active.
+- `/readyz`: Readiness check verifying live end-to-end database connectivity via SQL probe.
