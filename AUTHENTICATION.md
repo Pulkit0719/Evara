@@ -1,6 +1,8 @@
 # Evara Authentication System
 
-This document outlines the authentication architecture, security safeguards, password handling, and session management in Evara.
+This document outlines the authentication architecture, security safeguards, password handling, session management, and the post-launch recovery roadmap for Evara.
+
+---
 
 ## 1. Local Authentication Model
 
@@ -45,18 +47,49 @@ Session cookies are configured with:
 
 ---
 
-## 4. Legacy Account Migration Security
+## 4. Administrator Password Management
 
-Existing accounts created under legacy OAuth retain their records:
-- Legacy claiming requires **both** the registered email AND the account's unique verification token (`verificationToken`).
-- Email-only claiming is strictly blocked and rejected with `403 Forbidden`.
-- Accounts that already have a configured password cannot be re-claimed.
-- All historical cycles, symptoms, and profile data remain attached to the user ID.
+- **Public Claiming Retired**: Public legacy account claiming is disabled with HTTP 403.
+- **Verified Admin Procedure**: Authenticated administrators can reset or set local passwords using `auth.adminSetUserPassword` procedure.
 
 ---
 
 ## 5. Rate Limiting
 
-Sensitive authentication endpoints (`login`, `register`, `claimLegacyAccount`) are rate-limited:
-- Process-local throttling limits attempts to 10 per 15-minute window per IP.
-- Failed attempts increment the counter; successful logins reset the counter.
+Sensitive authentication endpoints (`login`, `register`) are rate-limited:
+- In-memory rate limiting blocks IPs after 10 failed attempts within a 15-minute sliding window.
+- Rate limits reset upon successful authentication.
+
+---
+
+## 6. Known Operational Limitations
+
+1. **No Self-Service Password Reset**: Users who forget their password currently require an administrator to reset it via `adminSetUserPassword`.
+2. **No Email Verification**: Accounts are active upon registration without an email verification loop.
+
+---
+
+## 7. Account Recovery Roadmap (Post-Launch)
+
+When real-user traffic warrants self-service account recovery, implement the following vendor-independent architecture:
+
+```text
+[ User Requests Reset ] ──► POST /api/trpc/auth.requestPasswordReset { email }
+                                  │
+                                  ├── Look up user by email (constant-time response)
+                                  ├── Generate crypto.randomBytes(32).toString('hex')
+                                  ├── Store SHA-256 hash in passwordResetTokens table
+                                  │     (expiresAt = Date.now() + 15 minutes, used = 0)
+                                  │
+                                  ▼
+[ Dispatch Reset Link ] ──► Send email via standard SMTP (Nodemailer / AWS SES / SendGrid SMTP)
+                            Link: https://evara-gray.vercel.app/reset-password?token=<rawToken>
+                                  │
+                                  ▼
+[ User Submits New Password ] ──► POST /api/trpc/auth.resetPassword { token, newPassword }
+                                  │
+                                  ├── Validate token hash, expiration, and used flag
+                                  ├── Mark token used in atomic transaction
+                                  ├── Scrypt-hash new password and update user record
+                                  └── Invalidate all active sessions for that user
+```
