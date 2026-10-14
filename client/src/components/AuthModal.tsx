@@ -7,11 +7,11 @@ import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
-import { Loader2, LockKeyhole, Sparkles } from "lucide-react";
+import { Loader2, LockKeyhole } from "lucide-react";
 
 export function AuthModal() {
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<"login" | "register" | "legacy">("login");
+  const [tab, setTab] = useState<"login" | "register">("login");
   const [, setLocation] = useLocation();
   const utils = trpc.useUtils();
 
@@ -19,7 +19,6 @@ export function AuthModal() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [legacyOpenId, setLegacyOpenId] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Listen to open-auth-modal custom event
@@ -60,25 +59,10 @@ export function AuthModal() {
     },
   });
 
-  const claimMutation = trpc.auth.claimLegacyAccount.useMutation({
-    onSuccess: (data) => {
-      toast.success("Legacy account linked successfully! Your records are preserved.");
-      utils.auth.me.setData(undefined, data.user as any);
-      utils.auth.me.invalidate();
-      setOpen(false);
-      resetForm();
-      setLocation("/app");
-    },
-    onError: (err) => {
-      setErrorMsg(err.message);
-    },
-  });
-
   const resetForm = () => {
     setEmail("");
     setPassword("");
     setName("");
-    setLegacyOpenId("");
     setErrorMsg(null);
   };
 
@@ -94,14 +78,7 @@ export function AuthModal() {
     registerMutation.mutate({ email, password, name: name || undefined });
   };
 
-  const handleClaim = (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg(null);
-    claimMutation.mutate({ email, newPassword: password, verificationToken: legacyOpenId });
-  };
-
-  const isPending =
-    loginMutation.isPending || registerMutation.isPending || claimMutation.isPending;
+  const isPending = loginMutation.isPending || registerMutation.isPending;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -127,10 +104,9 @@ export function AuthModal() {
         )}
 
         <Tabs value={tab} onValueChange={(val) => { setTab(val as any); setErrorMsg(null); }} className="w-full mt-2">
-          <TabsList className="grid w-full grid-cols-3 bg-[#ede3dc]">
+          <TabsList className="grid w-full grid-cols-2 bg-[#ede3dc]">
             <TabsTrigger value="login" className="text-xs">Sign In</TabsTrigger>
-            <TabsTrigger value="register" className="text-xs">Register</TabsTrigger>
-            <TabsTrigger value="legacy" className="text-xs">Migrate</TabsTrigger>
+            <TabsTrigger value="register" className="text-xs">Create Account</TabsTrigger>
           </TabsList>
 
           {/* SIGN IN */}
@@ -231,70 +207,6 @@ export function AuthModal() {
                   </>
                 ) : (
                   "Create Account"
-                )}
-              </Button>
-            </form>
-          </TabsContent>
-
-          {/* LEGACY MIGRATION */}
-          <TabsContent value="legacy">
-            <form onSubmit={handleClaim} className="space-y-3 pt-2">
-              <div className="p-2.5 rounded bg-[#f3ebe4] border border-[#e4d7ce] text-[11px] leading-relaxed text-[#6d5a65]">
-                <Sparkles className="inline h-3.5 w-3.5 mr-1 text-[#8f5261]" />
-                <strong>Existing Account?</strong> Link your previous account by verifying your account ownership key. All your logged cycles, symptoms, and wellness history will remain intact.
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="legacy-email" className="text-xs text-[#523d4a]">Registered Email</Label>
-                <Input
-                  id="legacy-email"
-                  type="email"
-                  placeholder="The email from your previous account"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="bg-white/80 border-[#d9ccc3] text-sm"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="legacy-password" className="text-xs text-[#523d4a]">Set New Password</Label>
-                <Input
-                  id="legacy-password"
-                  type="password"
-                  placeholder="Minimum 8 characters"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  minLength={8}
-                  required
-                  className="bg-white/80 border-[#d9ccc3] text-sm"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="legacy-openid" className="text-xs text-[#523d4a]">Account Verification Key *</Label>
-                <Input
-                  id="legacy-openid"
-                  type="text"
-                  placeholder="Legacy verification token or OpenID"
-                  value={legacyOpenId}
-                  onChange={(e) => setLegacyOpenId(e.target.value)}
-                  required
-                  className="bg-white/80 border-[#d9ccc3] text-sm"
-                />
-              </div>
-
-              <Button
-                type="submit"
-                disabled={isPending}
-                className="w-full bg-[#8f5261] hover:bg-[#7b4452] text-white"
-              >
-                {claimMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Linking Account…
-                  </>
-                ) : (
-                  "Claim & Set Password"
                 )}
               </Button>
             </form>

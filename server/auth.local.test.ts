@@ -258,83 +258,66 @@ describe("Session Security & Token Hashing", () => {
   });
 });
 
-describe("Legacy Account Claim Security", () => {
-  it("rejects claim attempt with missing verification token (fails closed)", async () => {
+describe("Legacy Account Claim Security & Admin Migration", () => {
+  it("rejects public claim attempts with FORBIDDEN (public claiming retired for security)", async () => {
     const { ctx } = createMockContext(null);
     const caller = appRouter.createCaller(ctx);
-
-    await expect(
-      (caller.auth.claimLegacyAccount as any)({
-        email: "legacy@example.com",
-        newPassword: "NewValidPassword123!",
-      })
-    ).rejects.toThrow();
-  });
-
-  it("rejects claim attempt with invalid verification token (403 Forbidden)", async () => {
-    const { ctx } = createMockContext(null);
-    const caller = appRouter.createCaller(ctx);
-
-    db.setTestDb({
-      select: () => ({
-        from: () => ({
-          where: () => ({
-            limit: () => [
-              {
-                id: 5,
-                email: "legacy@example.com",
-                openId: "correct-legacy-token-secret",
-                passwordHash: null,
-                role: "user",
-              },
-            ],
-          }),
-        }),
-      }),
-    });
 
     await expect(
       caller.auth.claimLegacyAccount({
         email: "legacy@example.com",
         newPassword: "NewValidPassword123!",
-        verificationToken: "attacker-wrong-token",
+        verificationToken: "any-token",
       })
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
-  it("rejects claim attempt on account that already has password configured", async () => {
-    const { ctx } = createMockContext(null);
+  it("adminSetUserPassword rejects unauthenticated or non-admin callers", async () => {
+    // Unauthenticated
+    const { ctx: unauthedCtx } = createMockContext(null);
+    const unauthedCaller = appRouter.createCaller(unauthedCtx);
+    await expect(
+      unauthedCaller.auth.adminSetUserPassword({
+        userId: 1,
+        newPassword: "NewValidPassword123!",
+      })
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+
+    // Regular non-admin user
+    const { ctx: regularCtx } = createMockContext({ id: 1, role: "user" });
+    const regularCaller = appRouter.createCaller(regularCtx);
+    await expect(
+      regularCaller.auth.adminSetUserPassword({
+        userId: 1,
+        newPassword: "NewValidPassword123!",
+      })
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("adminSetUserPassword rejects when user is not found", async () => {
+    const { ctx } = createMockContext({ id: 99, role: "admin" });
     const caller = appRouter.createCaller(ctx);
 
     db.setTestDb({
       select: () => ({
         from: () => ({
           where: () => ({
-            limit: () => [
-              {
-                id: 5,
-                email: "legacy@example.com",
-                openId: "valid-token",
-                passwordHash: "already:configured:hash",
-                role: "user",
-              },
-            ],
+            limit: () => [],
           }),
         }),
       }),
     });
 
     await expect(
-      caller.auth.claimLegacyAccount({
-        email: "legacy@example.com",
+      caller.auth.adminSetUserPassword({
+        userId: 9999,
         newPassword: "NewValidPassword123!",
-        verificationToken: "valid-token",
       })
-    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
-  it("successfully claims legacy account with valid verification token", async () => {
-    const { ctx, cookiesSet } = createMockContext(null);
+  it("adminSetUserPassword successfully updates password when caller is admin", async () => {
+    const { ctx } = createMockContext({ id: 99, role: "admin" });
     const caller = appRouter.createCaller(ctx);
 
     let updatedPasswordHash: string | null = null;
@@ -346,7 +329,8 @@ describe("Legacy Account Claim Security", () => {
               {
                 id: 5,
                 email: "legacy@example.com",
-                openId: "valid-token-12345",
+                name: "Legacy User",
+                openId: "legacy-oauth-id",
                 passwordHash: null,
                 role: "user",
               },
@@ -362,21 +346,17 @@ describe("Legacy Account Claim Security", () => {
           };
         },
       }),
-      insert: () => ({
-        values: () => [{ insertId: 1 }],
-      }),
     });
 
-    const result = await caller.auth.claimLegacyAccount({
-      email: "legacy@example.com",
-      newPassword: "NewValidPassword123!",
-      verificationToken: "valid-token-12345",
+    const result = await caller.auth.adminSetUserPassword({
+      userId: 5,
+      newPassword: "NewAdminAssignedPassword123!",
     });
 
     expect(result.success).toBe(true);
     expect(result.user.email).toBe("legacy@example.com");
     expect(updatedPasswordHash).not.toBeNull();
-    expect(cookiesSet).toHaveLength(1);
+    expect(updatedPasswordHash).toContain(":");
   });
 });
 

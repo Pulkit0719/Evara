@@ -12,7 +12,7 @@ import {
   sanitizeUser,
   verifyPassword,
 } from "../services/auth";
-import { publicProcedure, router } from "../_core/trpc";
+import { adminProcedure, publicProcedure, router } from "../_core/trpc";
 
 export const authRouter = router({
   /**
@@ -114,60 +114,47 @@ export const authRouter = router({
     }),
 
   /**
-   * Allows legacy accounts created via external OAuth to set a local password
-   * and migrate smoothly to independent authentication without losing data.
+   * Public legacy account claiming is retired for production security.
+   * All legacy account password setups are handled through verified administrator migration.
    */
   claimLegacyAccount: publicProcedure
     .input(
-      z
-        .object({
-          email: z.string().email("Please provide a valid email address."),
-          newPassword: z.string().min(8, "New password must be at least 8 characters long."),
-          verificationToken: z.string().min(1, "Verification token is required.").optional(),
-          openId: z.string().min(1, "Legacy OpenID verification is required.").optional(),
-        })
-        .refine(data => Boolean(data.verificationToken || data.openId), {
-          message: "A legacy verification token or OpenID is required to claim an existing account. Email-only claiming is prohibited.",
-          path: ["verificationToken"],
-        })
+      z.object({
+        email: z.string().email().optional(),
+        newPassword: z.string().optional(),
+        verificationToken: z.string().optional(),
+        openId: z.string().optional(),
+      })
     )
-    .mutation(async ({ input, ctx }) => {
-      const clientIp = (ctx.req.ip || (ctx.req.headers["x-forwarded-for"] as string) || "127.0.0.1").split(",")[0].trim();
-      checkAuthRateLimit(clientIp);
+    .mutation(async () => {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Public legacy account claiming has been retired for production security. Please contact your system administrator for verified account migration.",
+      });
+    }),
 
-      const user = await db.getUserByEmail(input.email);
+  /**
+   * Administrator-controlled account migration.
+   * Allows an authenticated administrator to set or reset a local password for a verified user.
+   */
+  adminSetUserPassword: adminProcedure
+    .input(
+      z.object({
+        userId: z.number().int().positive(),
+        newPassword: z.string().min(8, "Password must be at least 8 characters long."),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const user = await db.getUserById(input.userId);
       if (!user) {
-        recordAuthAttempt(clientIp);
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "No existing account found with this email address.",
-        });
-      }
-
-      if (user.passwordHash) {
-        recordAuthAttempt(clientIp);
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "This account already has a local password configured. Please use standard sign in.",
-        });
-      }
-
-      const providedToken = (input.verificationToken || input.openId || "").trim();
-      if (!providedToken || !user.openId || providedToken !== user.openId) {
-        recordAuthAttempt(clientIp);
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Invalid verification credentials. Email-only account claiming is strictly prohibited. Please provide your legitimate legacy verification token.",
+          message: "User not found.",
         });
       }
 
       const passwordHash = await hashPassword(input.newPassword);
       await db.updateUserPassword(user.id, passwordHash);
-      await db.updateUserLastSignedIn(user.id);
-
-      resetAuthRateLimit(clientIp);
-      await createSession(user, ctx.req, ctx.res);
-
       return {
         success: true,
         user: sanitizeUser(user),
