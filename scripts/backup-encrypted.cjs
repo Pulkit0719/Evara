@@ -1,11 +1,16 @@
 /**
- * Evara Zero-Cost Encrypted Database Backup Tool
+ * Evara Zero-Cost Encrypted Database Backup & Offsite Sync Tool
  * 
- * Extracts production database schema & records over TLS,
- * compresses using gzip (Level 9), encrypts client-side using AES-256-GCM,
- * computes SHA-256 integrity checksums, and stores in the dedicated
- * user-controlled backup directory: C:\Users\pulki\Evara-Backups
- * (with automatic 7-day retention cleanup).
+ * 1. Connects to TiDB Cloud production over TLS 1.3
+ * 2. Dumps database schema & records (parent-first order)
+ * 3. Compresses using gzip (Level 9)
+ * 4. Encrypts client-side using AES-256-GCM envelope [IV][AuthTag][Ciphertext]
+ * 5. Generates SHA-256 integrity checksum (.sha256 companion file)
+ * 6. Stores primary copy in dedicated local storage: C:\Users\pulki\Evara-Backups
+ * 7. Automatically copies .enc and .sha256 to OneDrive: C:\Users\pulki\OneDrive\Evara-Backups
+ *    (NEVER copies unencrypted .sql or .sql.gz files)
+ * 8. Verifies destination existence, exact size match, and SHA-256 integrity match
+ * 9. Enforces 7-day retention while guaranteeing the latest backup is NEVER deleted
  * 
  * NO credit cards, NO cloud billing, and NO public artifacts required.
  */
@@ -18,13 +23,14 @@ const crypto = require('crypto');
 const projectRoot = path.resolve(__dirname, '..');
 const mysql = require(path.join(projectRoot, 'node_modules/mysql2/promise'));
 
-// Dedicated off-repository backup directory
+// Dedicated backup storage directories (outside git repository)
 const PRIMARY_BACKUP_DIR = process.env.EVARA_BACKUP_DIR || 'C:\\Users\\pulki\\Evara-Backups';
+const ONEDRIVE_BACKUP_DIR = process.env.ONEDRIVE_BACKUP_DIR || 'C:\\Users\\pulki\\OneDrive\\Evara-Backups';
 const LOCAL_MIRROR_DIR = path.join(projectRoot, 'backups');
 
 const RETENTION_DAYS = parseInt(process.env.BACKUP_RETENTION_DAYS || '7', 10);
 
-// Load environment variables
+// Load environment variables safely
 function loadEnv() {
   const envPath = path.join(projectRoot, '.env');
   if (fs.existsSync(envPath)) {
@@ -61,15 +67,20 @@ function getEncryptionKey(secret) {
 async function runBackup() {
   console.log('[Backup] Initiating secure encrypted database backup...');
   console.log(`[Backup] Primary destination: ${PRIMARY_BACKUP_DIR}`);
+  console.log(`[Backup] Offsite OneDrive destination: ${ONEDRIVE_BACKUP_DIR}`);
 
+  // Ensure directories exist
   if (!fs.existsSync(PRIMARY_BACKUP_DIR)) {
     fs.mkdirSync(PRIMARY_BACKUP_DIR, { recursive: true });
+  }
+  if (!fs.existsSync(ONEDRIVE_BACKUP_DIR)) {
+    fs.mkdirSync(ONEDRIVE_BACKUP_DIR, { recursive: true });
   }
   if (!fs.existsSync(LOCAL_MIRROR_DIR)) {
     fs.mkdirSync(LOCAL_MIRROR_DIR, { recursive: true });
   }
 
-  // 1. Connect & dump schema + data
+  // 1. Parse DB and connect
   let parsed;
   try {
     parsed = new URL(DATABASE_URL.replace(/^mysql:\/\//, 'http://'));
@@ -166,47 +177,108 @@ async function runBackup() {
   const checksumContent = `${checksum}  ${filename}\n`;
 
   // 5. Write to Primary Dedicated Directory
-  fs.writeFileSync(path.join(PRIMARY_BACKUP_DIR, filename), finalPayload);
-  fs.writeFileSync(path.join(PRIMARY_BACKUP_DIR, `${filename}.sha256`), checksumContent);
-  console.log(`[Backup] Saved to dedicated storage: ${path.join(PRIMARY_BACKUP_DIR, filename)}`);
+  const primaryEncPath = path.join(PRIMARY_BACKUP_DIR, filename);
+  const primaryShaPath = path.join(PRIMARY_BACKUP_DIR, `${filename}.sha256`);
+  fs.writeFileSync(primaryEncPath, finalPayload);
+  fs.writeFileSync(primaryShaPath, checksumContent);
+  console.log(`[Backup] Saved to primary local storage: ${primaryEncPath}`);
 
-  // 6. Write to Local Mirror Directory
-  fs.writeFileSync(path.join(LOCAL_MIRROR_DIR, filename), finalPayload);
-  fs.writeFileSync(path.join(LOCAL_MIRROR_DIR, `${filename}.sha256`), checksumContent);
-  console.log(`[Backup] Saved to local mirror: ${path.join(LOCAL_MIRROR_DIR, filename)}`);
+  // 6. Write to Local Mirror Directory (git-ignored)
+  const mirrorEncPath = path.join(LOCAL_MIRROR_DIR, filename);
+  const mirrorShaPath = path.join(LOCAL_MIRROR_DIR, `${filename}.sha256`);
+  fs.writeFileSync(mirrorEncPath, finalPayload);
+  fs.writeFileSync(mirrorShaPath, checksumContent);
+  console.log(`[Backup] Saved to local mirror: ${mirrorEncPath}`);
 
-  // 7. Enforce retention policy in both locations
+  // 7. Copy ONLY encrypted .enc and .sha256 to OneDrive (NEVER plaintext .sql or unencrypted .sql.gz)
+  const oneDriveEncPath = path.join(ONEDRIVE_BACKUP_DIR, filename);
+  const oneDriveShaPath = path.join(ONEDRIVE_BACKUP_DIR, `${filename}.sha256`);
+
+  console.log(`[Backup] Syncing encrypted backup to OneDrive...`);
+  fs.copyFileSync(primaryEncPath, oneDriveEncPath);
+  fs.copyFileSync(primaryShaPath, oneDriveShaPath);
+
+  // 8. Verify OneDrive synchronization integrity
+  if (!fs.existsSync(oneDriveEncPath) || !fs.existsSync(oneDriveShaPath)) {
+    throw new Error('[Backup] OneDrive synchronization failed: Destination files do not exist.');
+  }
+
+  const oneDriveSize = fs.statSync(oneDriveEncPath).size;
+  if (oneDriveSize !== finalPayload.length) {
+    throw new Error(`[Backup] OneDrive synchronization failed: Size mismatch (Expected ${finalPayload.length}, got ${oneDriveSize}).`);
+  }
+
+  const oneDriveData = fs.readFileSync(oneDriveEncPath);
+  const oneDriveChecksum = crypto.createHash('sha256').update(oneDriveData).digest('hex');
+  if (oneDriveChecksum.toLowerCase() !== checksum.toLowerCase()) {
+    throw new Error(`[Backup] OneDrive synchronization failed: Checksum mismatch (Expected ${checksum}, got ${oneDriveChecksum}).`);
+  }
+
+  console.log(`[Backup] OneDrive verification PASSED: Size (${oneDriveSize} B) and SHA-256 match perfectly.`);
+
+  // 9. Enforce 7-day retention safely (guaranteeing the latest valid backup is NEVER deleted)
   enforceRetention(PRIMARY_BACKUP_DIR);
+  enforceRetention(ONEDRIVE_BACKUP_DIR);
   enforceRetention(LOCAL_MIRROR_DIR);
 
   return {
     status: 'SUCCESS',
-    primaryPath: path.join(PRIMARY_BACKUP_DIR, filename),
+    primaryPath: primaryEncPath,
+    oneDrivePath: oneDriveEncPath,
     filename,
     sizeBytes: finalPayload.length,
     checksum,
+    oneDriveVerified: true,
     encryption: 'AES-256-GCM',
     compression: 'gzip-level-9',
     retentionDays: RETENTION_DAYS
   };
 }
 
+/**
+ * Enforce retention policy safely.
+ * GUARANTEE: Never deletes the newest/latest valid backup, even if expired or on error.
+ */
 function enforceRetention(dir) {
-  if (!fs.existsSync(dir)) return;
-  const files = fs.readdirSync(dir);
-  const now = Date.now();
-  const maxAgeMs = RETENTION_DAYS * 24 * 60 * 60 * 1000;
+  try {
+    if (!fs.existsSync(dir)) return;
+    const files = fs.readdirSync(dir);
 
-  for (const file of files) {
-    if (file.startsWith('evara-') && (file.endsWith('.sql.gz.enc') || file.endsWith('.sha256') || file.endsWith('.sql'))) {
-      const fullPath = path.join(dir, file);
-      const stat = fs.statSync(fullPath);
-      const ageMs = now - stat.mtimeMs;
+    const backupFiles = files
+      .filter(f => f.startsWith('evara-') && f.endsWith('.sql.gz.enc'))
+      .map(f => {
+        const fullPath = path.join(dir, f);
+        return { name: f, fullPath, mtimeMs: fs.statSync(fullPath).mtimeMs };
+      })
+      .sort((a, b) => b.mtimeMs - a.mtimeMs); // Newest first
+
+    // Always protect at least the latest backup from deletion
+    if (backupFiles.length <= 1) {
+      return;
+    }
+
+    const now = Date.now();
+    const maxAgeMs = RETENTION_DAYS * 24 * 60 * 60 * 1000;
+
+    // Evaluate older backups (index 1 and above)
+    for (let i = 1; i < backupFiles.length; i++) {
+      const backup = backupFiles[i];
+      const ageMs = now - backup.mtimeMs;
       if (ageMs > maxAgeMs) {
-        fs.unlinkSync(fullPath);
-        console.log(`[Retention] Purged backup older than ${RETENTION_DAYS} days from ${dir}: ${file}`);
+        try {
+          fs.unlinkSync(backup.fullPath);
+          const shaPath = `${backup.fullPath}.sha256`;
+          if (fs.existsSync(shaPath)) {
+            fs.unlinkSync(shaPath);
+          }
+          console.log(`[Retention] Purged expired backup (${(ageMs / 86400000).toFixed(1)} days old) from ${dir}: ${backup.name}`);
+        } catch (err) {
+          console.warn(`[Retention] Warning: Could not purge ${backup.name}:`, err.message);
+        }
       }
     }
+  } catch (error) {
+    console.warn(`[Retention] Retention check encountered an issue in ${dir}, safely preserving backups:`, error.message);
   }
 }
 

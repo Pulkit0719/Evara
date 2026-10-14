@@ -18,6 +18,7 @@ const projectRoot = path.resolve(__dirname, '..');
 const mysql = require(path.join(projectRoot, 'node_modules/mysql2/promise'));
 
 const PRIMARY_BACKUP_DIR = process.env.EVARA_BACKUP_DIR || 'C:\\Users\\pulki\\Evara-Backups';
+const ONEDRIVE_BACKUP_DIR = process.env.ONEDRIVE_BACKUP_DIR || 'C:\\Users\\pulki\\OneDrive\\Evara-Backups';
 const LOCAL_MIRROR_DIR = path.join(projectRoot, 'backups');
 
 function loadEnv() {
@@ -72,6 +73,14 @@ async function runRestore() {
       if (files.length > 0) {
         files.sort().reverse();
         backupFilePath = path.join(PRIMARY_BACKUP_DIR, files[0]);
+      }
+    }
+    // Fallback to OneDrive offsite backup directory
+    if (!backupFilePath && fs.existsSync(ONEDRIVE_BACKUP_DIR)) {
+      files = fs.readdirSync(ONEDRIVE_BACKUP_DIR).filter(f => f.endsWith('.sql.gz.enc') || f.endsWith('.sql.gz') || f.endsWith('.sql'));
+      if (files.length > 0) {
+        files.sort().reverse();
+        backupFilePath = path.join(ONEDRIVE_BACKUP_DIR, files[0]);
       }
     }
     // Fallback to local mirror if needed

@@ -35,8 +35,13 @@ Sync to private OneDrive / iCloud / Google Drive (Zero Extra Cost, Zero Credit C
 | Layer | Target / Location | Frequency | Retention | Cost / Credit Card | Encryption |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Tier 1 (Continuous)** | TiDB Cloud Serverless (AWS Tokyo Multi-AZ) | Continuous PITR | 30 Days | Free Tier / No Card | AES-256 (At-Rest) |
-| **Tier 2 (Dedicated Local)** | `C:\Users\pulki\Evara-Backups` | Daily / Scheduled | 7 Days | Free / Zero Cost | AES-256-GCM + gzip |
-| **Tier 3 (Offsite Personal Sync)**| Personal OneDrive / iCloud / Google Drive | Automated File Sync | User-Controlled | Free Tier / No Card | AES-256-GCM |
+| **Tier 2 (Primary Local)** | `C:\Users\pulki\Evara-Backups` | Daily / Scheduled | 7 Days | Free / Zero Cost | AES-256-GCM + gzip |
+| **Tier 3 (Offsite OneDrive)**| `C:\Users\pulki\OneDrive\Evara-Backups` | Auto-synced on Backup | 7 Days | Free / No Card | AES-256-GCM |
+
+### Configured Destinations
+- **Primary local copy**: `C:\Users\pulki\Evara-Backups`
+- **Independent offsite synchronized copy**: `C:\Users\pulki\OneDrive\Evara-Backups`
+- **TiDB managed snapshots**: `ACTIVE`
 
 ---
 
@@ -74,20 +79,23 @@ node scripts/restore-encrypted.cjs --file="C:\Users\pulki\Evara-Backups\evara-pr
 
 ---
 
-## 4. Recommended Private Offsite Cloud Sync
+## 4. Active Microsoft OneDrive Offsite Sync
 
-To achieve durable offsite protection without paying for cloud storage or entering a credit card:
+To achieve durable offsite protection without paying for cloud storage or entering a credit card, Microsoft OneDrive is configured as the offsite synchronized copy destination:
 
-1. **Microsoft OneDrive (Recommended & Detected on Windows)**:
-   - Dedicated folder: `C:\Users\pulki\OneDrive\Evara-Backups`
-   - You can copy or link `C:\Users\pulki\Evara-Backups` to your OneDrive directory.
-   - OneDrive will automatically sync the AES-256-GCM encrypted backup files offsite.
+1. **Dedicated Offsite Target**:
+   - Primary: `C:\Users\pulki\Evara-Backups`
+   - Offsite OneDrive: `C:\Users\pulki\OneDrive\Evara-Backups`
+   - Both locations exist outside the Git repository.
 
-2. **Apple iCloud Drive (Detected)**:
-   - Path: `C:\Users\pulki\iCloudDrive`
+2. **Automatic Verification**:
+   - Only `.enc` and `.sha256` files are synced (plaintext `.sql` and unencrypted `.sql.gz` are strictly excluded).
+   - After file transfer, the script automatically verifies destination existence, exact byte size, and SHA-256 integrity hash match.
+   - 7-day retention is applied, with a hard guarantee that the most recent valid backup is never deleted.
 
-3. **Security Guarantee**:
-   Because backups are encrypted client-side using AES-256-GCM *before* reaching the sync directory, the cloud provider (Microsoft, Apple, Google, etc.) can never read user health records or database contents.
+3. **Privacy & Cryptographic Security**:
+   - Backups are encrypted client-side using `AES-256-GCM` prior to reaching the sync directory.
+   - Microsoft OneDrive only ever stores encrypted binary payloads, meaning zero plaintext health or authentication data is accessible by the cloud provider.
 
 ---
 

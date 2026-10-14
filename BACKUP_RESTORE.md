@@ -17,10 +17,12 @@ npm run db:backup
 node scripts/backup-encrypted.cjs
 ```
 
-- **Primary Destination**: `C:\Users\pulki\Evara-Backups\evara-prod-<timestamp>.sql.gz.enc`
-- **Integrity File**: `*.sql.gz.enc.sha256`
+- **Primary Local Copy**: `C:\Users\pulki\Evara-Backups\evara-prod-<timestamp>.sql.gz.enc`
+- **Independent Offsite Synchronized Copy**: `C:\Users\pulki\OneDrive\Evara-Backups\evara-prod-<timestamp>.sql.gz.enc`
+- **Integrity File**: `*.sql.gz.enc.sha256` (verified with SHA-256)
+- **TiDB Managed Snapshots**: `ACTIVE` (Serverless continuous snapshots with 30-day PITR)
 - **Security**: Authenticated `AES-256-GCM` client-side encryption + `gzip` compression (Level 9).
-- **Retention**: Automatic 7-day retention cleanup.
+- **Retention**: Automatic 7-day retention cleanup (safely preserves the latest valid backup).
 
 ### Rehearsal & Restore Tool: `scripts/restore-encrypted.cjs`
 
